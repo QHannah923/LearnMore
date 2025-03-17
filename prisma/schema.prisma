@@ -1,0 +1,99 @@
+// This is your Prisma schema file for LearnMore platform
+// To apply migrations: npx prisma migrate dev
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  password      String
+  image         String?
+  bio           String?
+  role          Role      @default(USER)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  lessons       Lesson[]
+  enrollments   Enrollment[]
+  practiceSubmissions PracticeSubmission[]
+}
+
+model Lesson {
+  id            String    @id @default(cuid())
+  title         String
+  description   String?
+  content       String    @db.Text
+  published     Boolean   @default(false)
+  authorId      String
+  author        User      @relation(fields: [authorId], references: [id])
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  enrollments   Enrollment[]
+  practiceExercises PracticeExercise[]
+  tags          LessonTag[]
+}
+
+model Enrollment {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id])
+  lessonId      String
+  lesson        Lesson    @relation(fields: [lessonId], references: [id])
+  progress      Int       @default(0)
+  completed     Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([userId, lessonId])
+}
+
+model PracticeExercise {
+  id            String    @id @default(cuid())
+  title         String
+  description   String
+  initialCode   String    @db.Text
+  solution      String    @db.Text
+  testCases     Json      // For checking user solutions
+  difficultyLevel String  @default("MEDIUM")
+  lessonId      String
+  lesson        Lesson    @relation(fields: [lessonId], references: [id])
+  submissions   PracticeSubmission[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model PracticeSubmission {
+  id            String    @id @default(cuid())
+  code          String    @db.Text
+  status        SubmissionStatus
+  exerciseId    String
+  exercise      PracticeExercise @relation(fields: [exerciseId], references: [id])
+  userId        String
+  user          User      @relation(fields: [userId], references: [id])
+  createdAt     DateTime  @default(now())
+}
+
+model LessonTag {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  lessons   Lesson[]
+}
+
+enum Role {
+  USER
+  INSTRUCTOR
+  ADMIN
+}
+
+enum SubmissionStatus {
+  PENDING
+  PASSED
+  FAILED
+}
